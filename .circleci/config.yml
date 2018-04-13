@@ -12,7 +12,7 @@ jobs:
       - checkout
       - add_ssh_keys:
           fingerprints:
-            - "66:3b:7c:d5:43:b5:fa:bf:08:45:3f:a1:f1:be:bd:b1"
+            - "0b:b6:ca:6f:0b:3d:bf:d7:14:c7:b2:58:12:49:79:8b"
       - restore_cache:
           name: Restoring node_modules
           key: v2-node_modules-{{ checksum "yarn.lock" }}
