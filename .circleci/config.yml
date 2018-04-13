@@ -1,0 +1,114 @@
+version: 2
+
+defaults: &defaults
+  working_directory: /home/circleci/jp_abbott-diabetescare_com
+  docker:
+    - image: circleci/node:8.9.1-stretch-browsers
+
+jobs:
+  setup:
+    <<: *defaults
+    steps:
+      - checkout
+      - add_ssh_keys:
+          fingerprints:
+            - "66:3b:7c:d5:43:b5:fa:bf:08:45:3f:a1:f1:be:bd:b1"
+      - restore_cache:
+          name: Restoring node_modules
+          key: v2-node_modules-{{ checksum "yarn.lock" }}
+      - run:
+          name: Install dependancies
+          command: yarn
+      - run:
+          name: Spill git guts
+          command: cat ~/.gitconfig
+      - save_cache:
+          name: Caching node_modules
+          key: v2-node_modules-{{ checksum "yarn.lock" }}
+          paths:
+            - node_modules
+      - persist_to_workspace:
+          root: /home/circleci
+          paths:
+            - .ssh
+            - jp_abbott-diabetescare_com
+
+  lint:
+    <<: *defaults
+    steps:
+      - attach_workspace:
+          at: /home/circleci
+      - restore_cache:
+          name: Restoring node_modules
+          key: v2-node_modules-{{ checksum "yarn.lock" }}
+      - run:
+          name: Lint
+          command: |
+            yarn lint
+
+  build:
+    <<: *defaults
+    steps:
+      - attach_workspace:
+          at: /home/circleci
+      - restore_cache:
+          name: Restoring node_modules
+          key: v2-node_modules-{{ checksum "yarn.lock" }}
+      - run:
+          name: Build Step
+          command: |
+            mkdir ./dist
+            cp -a ./public/. ./dist/
+      - persist_to_workspace:
+          root: /home/circleci
+          paths:
+            - jp_abbott-diabetescare_com
+
+  deploy-gh-pages:
+    <<: *defaults
+    steps:
+      - attach_workspace:
+          at: /home/circleci
+      - restore_cache:
+          name: Restoring node_modules
+          key: v2-node_modules-{{ checksum "yarn.lock" }}
+      - run:
+          name: Check Deployment
+          command: |
+            remoteorigin=$(git config remote.origin.url)
+            mkdir ./gh-pages
+            cd ./gh-pages
+            git init
+            git config user.email $GIT_EMAIL > /dev/null 2>&1
+            git config user.name $GIT_USER > /dev/null 2>&1
+            git remote add origin $remoteorigin
+            git fetch origin gh-pages
+            git checkout gh-pages
+            cp ./CNAME ../dist/ && rm -rf ./* && cp -a ../dist/. ./
+            git add -A
+            git commit --allow-empty -m "Deploy to Github pages [ci skip]"
+            git push --force --quiet origin gh-pages > /dev/null 2>&1
+
+workflows:
+  version: 2
+  merge_feature_branch:
+    jobs:
+      - setup
+      - lint:
+          requires:
+            - setup
+      - build:
+          requires:
+            - setup
+          filters:
+            branches:
+              only:
+                - /feature\/.*/
+                - /develop/
+      - deploy-gh-pages:
+          requires:
+            - build
+          filters:
+            branches:
+              only:
+                - /develop/
