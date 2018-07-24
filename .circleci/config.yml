@@ -121,6 +121,22 @@ jobs:
             # apt-get clean && apt-get autoclean
             aws s3 sync ./public s3://qa.abbott-diabetescare.com
 
+  deploy-aws-prod:
+    <<: *defaults
+    steps:
+      - attach_workspace:
+          at: /home/circleci
+      - restore_cache:
+          name: Restoring node_modules
+          key: v2-node_modules-{{ checksum "yarn.lock" }}
+      - run:
+          name: Check Deployment
+          command: |
+            sudo apt-get update && sudo apt-get install -y python-pip
+            sudo pip install awscli
+            # apt-get clean && apt-get autoclean
+            aws s3 sync ./public s3://jp.abbott-diabetescare.com
+
   # deploy-aws:
   #   <<: *defaults
   #   steps:
@@ -169,6 +185,13 @@ workflows:
               only:
                 - /develop/
       - deploy-aws-qa:
+          requires:
+            - build
+          filters:
+            branches:
+              only:
+                - /release\/.*/
+      - deploy-aws-prod:
           requires:
             - build
           filters:
