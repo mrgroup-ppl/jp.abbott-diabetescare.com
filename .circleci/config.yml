@@ -169,6 +169,7 @@ workflows:
               only:
                 - /feature\/.*/
                 - /develop/
+                - /release\/.*/
                 - /master/
       - deploy-gh-pages:
           requires:
