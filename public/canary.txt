@@ -1,1 +1,0 @@
-Just a canary test. If all goes well, I should be deleted automatically.
